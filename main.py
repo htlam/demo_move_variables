@@ -1,5 +1,3 @@
-# https://www.pythontutorial.net/tkinter/
-
 from tkinter import *
 from tkinter import ttk
 
