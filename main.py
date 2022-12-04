@@ -173,15 +173,15 @@ def redraw():
                 )
             elif t == CONTROL:
                 cv.create_text(
-                    ((j + 0.25) * G_SZ, (i + 0.25) * G_SZ),
+                    ((j + 0.25) * G_SZ, (i + 0.2) * G_SZ),
                     text="+",
-                    fill="blue",
+                    fill="red",
                     font=FONT16,
                 )
                 cv.create_text(
-                    ((j + 0.25) * G_SZ, (i + 0.75) * G_SZ),
-                    text="-",
-                    fill="blue",
+                    ((j + 0.25) * G_SZ, (i + 0.9) * G_SZ),
+                    text="−",
+                    fill="red",
                     font=FONT16,
                 )
 
