@@ -1,11 +1,12 @@
 # https://www.pythontutorial.net/tkinter/
 
 from tkinter import *
+from tkinter import ttk
 
 # Constants
 G_SZ = 30
-G_ROW = 10
-G_COL = 15
+G_ROW = 8
+G_COL = 10
 B_SZ = 3
 FONT = "tkDefaultFont 12"
 FONT2 = "tkDefaultFont 8"
@@ -16,11 +17,60 @@ NAME = 1
 INDEX = 2
 VALUE = 3
 
+# Options
+opt1 = [
+    "Swap A and B",
+    "Delete A[1]",
+    "Insert X at A[1]",
+    "Reverse A",
+]
+opt2 = [
+    "without tmp variable",
+    "with tmp variable",
+]
+opt_var = [
+    {"A": 3, "B": 4},
+    {},
+    {"X": 1},
+    {},
+]
+opt_arr = [
+    {},
+    {"A": [1, 3, 5, 7, 9]},
+    {"A": [2, 4, 6, 8, None]},
+    {"A": [1, 2, 3, 5, 8]},
+]
+
 # States
-var = {}
-arr = {}
+task1 = 0
+task2 = 0
+var = opt_var[0]
+arr = opt_arr[0]
 grid = None
 selected = None
+code = ""
+
+
+# State change handlers
+def change_task(v):
+    global task1, var, arr
+    task1 = opt1.index(v)
+    var = opt_var[task1]
+    arr = opt_arr[task1]
+    if task2 == 1:
+        var["tmp"] = 0
+    reset(None)
+
+
+def change_tmp(v):
+    global task2
+    task2 = opt2.index(v)
+    if task2 == 1:
+        var["tmp"] = 0
+    else:
+        del var["tmp"]
+    reset(None)
+
 
 ##
 # Widgets
@@ -29,44 +79,52 @@ selected = None
 # Window settings
 root = Tk()
 root.title("How to move variables")
-
-# Frame for padding
 app = Frame(root)
 app.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
-# Canvas
-cv = Canvas(app, width=G_COL * G_SZ, height=G_ROW * G_SZ, bg="black")
-cv.pack(fill=BOTH, expand=True)
-
-# Textbox
-txt = Text(app, height=10, padx=5, pady=5)
-txt["state"] = "disabled"
-txt.pack(fill=X)
+# TOP frame
+top = Frame(app)
+top.pack(fill=BOTH, expand=True)
+cv = Canvas(top, width=G_COL * G_SZ, height=G_ROW * G_SZ, bg="black")
+cv.pack(fill=BOTH, expand=True, side=LEFT)
+txt = Text(top, state="disabled", width=20, height=10, padx=5, pady=5)
+txt.pack(fill=Y, side=RIGHT)
 
 # Bottom frame
 bottom = Frame(app)
-btn = Button(bottom, text="Reset")
-btn.pack()
-bottom.pack()
+bottom.pack(fill=X)
+btn = ttk.Button(bottom, text="Reset")
+btn.pack(side=RIGHT)
+dropdown1 = ttk.OptionMenu(bottom, StringVar(app), opt1[0], *opt1, command=change_task)
+dropdown1.pack(side=LEFT)
+dropdown2 = ttk.OptionMenu(bottom, StringVar(app), opt2[0], *opt2, command=change_tmp)
+dropdown2.pack(side=LEFT)
 
 # Reset grid with variables and arrays
 def init_grid(var, arr):
     grid = [[[BLANK, None, None]] * G_COL for _ in range(G_ROW)]
+    offset = 2 if len(var) else 0
     for i, (k, v) in enumerate(var.items()):
         grid[2][i * 3 + 1] = [NAME, k, k]
         grid[2][i * 3 + 2] = [VALUE, k, v]
     for i, (k, v) in enumerate(arr.items()):
-        grid[i * 2 + 4][1] = [NAME, k, k]
+        grid[i * 2 + 2 + offset][1] = [NAME, k, k]
         for j in range(len(v)):
-            grid[i * 2 + 4][j + 2] = [VALUE, f"{k}[{j}]", v[j]]
-            grid[i * 2 + 5][j + 2] = [INDEX, k, j]
+            grid[i * 2 + 2 + offset][j + 2] = [VALUE, f"{k}[{j}]", v[j]]
+            grid[i * 2 + 3 + offset][j + 2] = [INDEX, k, j]
     return grid
 
 
-# Redraw canvas
+##
+# Draw functions
+#
+
+
 def redraw():
     cv.delete("all")
-    cv.create_text((5, 5), anchor=NW, text=task, fill="orange", font=FONT)
+    cv.create_text(
+        (5, 5), anchor=NW, text=f"{opt1[task1]} {opt2[task2]}", fill="orange", font=FONT
+    )
     for i in range(G_ROW):
         for j in range(G_COL):
             t, n, v = grid[i][j]
@@ -100,7 +158,6 @@ def redraw():
                 )
 
 
-# Draw draging value
 def draw_drag(x, y, v):
     cv.create_rectangle(
         (x - G_SZ / 2, y - G_SZ / 2),
@@ -114,7 +171,7 @@ def draw_drag(x, y, v):
 
 ##
 # Handlers
-##
+#
 
 
 def press(e):
@@ -129,16 +186,24 @@ def press(e):
 
 def release(e):
     cv.config(cursor="arrow")
-    global selected
+    global selected, code
     if selected:
         i = e.y // G_SZ
         j = e.x // G_SZ
         i2, j2 = selected
         selected = None
-        if 0 <= i < G_ROW and 0 <= j < G_COL and grid[i][j][0] == VALUE:
-            _, n, v = grid[i][j]
+        if (
+            not (i == i2 and j == j2)
+            and 0 <= i < G_ROW
+            and 0 <= j < G_COL
+            and grid[i][j][0] == VALUE
+        ):
             grid[i][j][2] = grid[i2][j2][2]
-            print(f"{grid[i][j][1]} <- {grid[i2][j2][1]}")
+            code += f"{grid[i][j][1]} <- {grid[i2][j2][1]}\n"
+            txt.config(state="normal")
+            txt.delete("1.0", "end")
+            txt.insert("1.0", code)
+            txt.config(state="disabled")
             cv.config(cursor="hand2")
         redraw()
 
@@ -161,7 +226,11 @@ def drag(e):
 
 
 def reset(e):
-    global grid
+    global code, grid
+    code = ""
+    txt.config(state="normal")
+    txt.delete("1.0", "end")
+    txt.config(state="disabled")
     grid = init_grid(var, arr)
     redraw()
 
@@ -174,18 +243,7 @@ cv.bind("<B1-Motion>", drag)
 btn.bind("<Button-1>", reset)
 
 # Main
-task = "Swap a and b"
-var = {"X": 3, "Y": 4}
-arr = {
-    "A": [1, 3, 5],
-    "B": [2, 4, 6, 8],
-}
 grid = init_grid(var, arr)
 redraw()
-
-# Add code
-txt["state"] = "normal"
-txt.insert("1.0", "Demo")
-txt["state"] = "disabled"
 
 app.mainloop()
