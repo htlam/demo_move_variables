@@ -8,20 +8,25 @@ G_SZ = 30
 G_ROW = 8
 G_COL = 10
 B_SZ = 3
-FONT = "tkDefaultFont 12"
-FONT2 = "tkDefaultFont 8"
+FONT8 = "tkDefaultFont 8"
+FONT12 = "tkDefaultFont 12"
+FONT16 = "tkDefaultFont 16"
 
 # Grid types
 BLANK = 0
 NAME = 1
 INDEX = 2
 VALUE = 3
+LENGTH = 4
+CONTROL = 5
 
 # Options
 opt1 = [
     "Swap A and B",
+    "Swap A[1] and A[3]",
     "Delete A[1]",
     "Insert X at A[1]",
+    "Move A[3] before A[0]",
     "Reverse A",
 ]
 opt2 = [
@@ -31,13 +36,17 @@ opt2 = [
 opt_var = [
     {"A": 3, "B": 4},
     {},
+    {},
     {"X": 1},
+    {},
     {},
 ]
 opt_arr = [
     {},
+    {"A": [2, 7, 1, 4, 3]},
     {"A": [1, 3, 5, 7, 9]},
-    {"A": [2, 4, 6, 8, None]},
+    {"A": [2, 4, 6, 8]},
+    {"A": [2, 7, 1, 4, 3]},
     {"A": [1, 2, 3, 5, 8]},
 ]
 
@@ -48,7 +57,6 @@ var = opt_var[0]
 arr = opt_arr[0]
 grid = None
 selected = None
-code = ""
 
 
 # State change handlers
@@ -58,7 +66,7 @@ def change_task(v):
     var = opt_var[task1]
     arr = opt_arr[task1]
     if task2 == 1:
-        var["tmp"] = 0
+        var["tmp"] = None
     reset(None)
 
 
@@ -66,7 +74,7 @@ def change_tmp(v):
     global task2
     task2 = opt2.index(v)
     if task2 == 1:
-        var["tmp"] = 0
+        var["tmp"] = None
     else:
         del var["tmp"]
     reset(None)
@@ -103,15 +111,18 @@ dropdown2.pack(side=LEFT)
 # Reset grid with variables and arrays
 def init_grid(var, arr):
     grid = [[[BLANK, None, None]] * G_COL for _ in range(G_ROW)]
-    offset = 2 if len(var) else 0
     for i, (k, v) in enumerate(var.items()):
         grid[2][i * 3 + 1] = [NAME, k, k]
         grid[2][i * 3 + 2] = [VALUE, k, v]
     for i, (k, v) in enumerate(arr.items()):
-        grid[i * 2 + 2 + offset][1] = [NAME, k, k]
+        grid[i * 2 + 4][1] = [NAME, k, k]
         for j in range(len(v)):
-            grid[i * 2 + 2 + offset][j + 2] = [VALUE, f"{k}[{j}]", v[j]]
-            grid[i * 2 + 3 + offset][j + 2] = [INDEX, k, j]
+            grid[i * 2 + 4][j + 2] = [VALUE, f"{k}[{j}]", v[j]]
+            grid[i * 2 + 5][j + 2] = [INDEX, k, j]
+    if arr:
+        grid[2][len(var) * 3 + 1] = [NAME, "N", "N"]
+        grid[2][len(var) * 3 + 2] = [LENGTH, "N", len(list(arr.values())[0])]
+        grid[2][len(var) * 3 + 3] = [CONTROL, "N", "N"]
     return grid
 
 
@@ -123,7 +134,11 @@ def init_grid(var, arr):
 def redraw():
     cv.delete("all")
     cv.create_text(
-        (5, 5), anchor=NW, text=f"{opt1[task1]} {opt2[task2]}", fill="orange", font=FONT
+        (5, 5),
+        anchor=NW,
+        text=f"{opt1[task1]} {opt2[task2]}",
+        fill="orange",
+        font=FONT12,
     )
     for i in range(G_ROW):
         for j in range(G_COL):
@@ -133,7 +148,7 @@ def redraw():
                     ((j + 0.5) * G_SZ, (i + 0.5) * G_SZ),
                     text=n,
                     fill="yellow",
-                    font=FONT,
+                    font=FONT12,
                 )
             elif t == INDEX:
                 cv.create_text(
@@ -141,9 +156,9 @@ def redraw():
                     text=v,
                     anchor=N,
                     fill="grey",
-                    font=FONT2,
+                    font=FONT8,
                 )
-            elif t == VALUE:
+            elif t == VALUE or t == LENGTH:
                 cv.create_rectangle(
                     (j * G_SZ, i * G_SZ),
                     ((j + 1) * G_SZ, (i + 1) * G_SZ),
@@ -154,7 +169,20 @@ def redraw():
                     ((j + 0.5) * G_SZ, (i + 0.5) * G_SZ),
                     text=v,
                     fill="lightblue",
-                    font=FONT,
+                    font=FONT12,
+                )
+            elif t == CONTROL:
+                cv.create_text(
+                    ((j + 0.25) * G_SZ, (i + 0.25) * G_SZ),
+                    text="+",
+                    fill="blue",
+                    font=FONT16,
+                )
+                cv.create_text(
+                    ((j + 0.25) * G_SZ, (i + 0.75) * G_SZ),
+                    text="-",
+                    fill="blue",
+                    font=FONT16,
                 )
 
 
@@ -166,7 +194,22 @@ def draw_drag(x, y, v):
         outline="green",
         width=2,
     )
-    cv.create_text((x, y), text=v, fill="yellow", font=FONT)
+    cv.create_text((x, y), text=v, fill="yellow", font=FONT12)
+
+
+def set_text(text):
+    txt.config(state="normal")
+    txt.delete("1.0", "end")
+    txt.insert("1.0", text)
+    txt.config(state="disabled")
+
+
+def add_text(text):
+    text = (txt.get("1.0", "end").strip() + "\n" + text).strip()
+    txt.config(state="normal")
+    txt.delete("1.0", "end")
+    txt.insert("1.0", text)
+    txt.config(state="disabled")
 
 
 ##
@@ -178,15 +221,33 @@ def press(e):
     global selected
     i = e.y // G_SZ
     j = e.x // G_SZ
-    if 0 <= i < G_ROW and 0 <= j < G_COL and grid[i][j][0] == VALUE:
-        selected = (i, j)
-    else:
-        selected = None
+    if 0 <= i < G_ROW and 0 <= j < G_COL:
+        if grid[i][j][0] == VALUE:
+            selected = (i, j)
+            return
+        if grid[i][j][0] == CONTROL and e.x // (G_SZ / 2) % 2 == 0:
+            cnt = sum(x == VALUE for x, _, _ in grid[4])
+            name = grid[4][1][1]
+            if e.y // (G_SZ / 2) % 2 == 0:
+                if cnt < len(grid[0]) - 2:
+                    add_text(f"{grid[i][j][1]} <- {grid[i][j][1]} + 1")
+                    grid[i][j - 1][2] += 1
+                    grid[4][cnt + 2] = [VALUE, f"{name}[{cnt}]", None]
+                    grid[5][cnt + 2] = [INDEX, name, cnt]
+            else:
+                if cnt > 0:
+                    add_text(f"{grid[i][j][1]} <- {grid[i][j][1]} - 1")
+                    grid[i][j - 1][2] -= 1
+                    grid[4][cnt + 1] = [BLANK, None, None]
+                    grid[5][cnt + 1] = [BLANK, None, None]
+            redraw()
+            return
+    selected = None
 
 
 def release(e):
     cv.config(cursor="arrow")
-    global selected, code
+    global selected
     if selected:
         i = e.y // G_SZ
         j = e.x // G_SZ
@@ -199,11 +260,7 @@ def release(e):
             and grid[i][j][0] == VALUE
         ):
             grid[i][j][2] = grid[i2][j2][2]
-            code += f"{grid[i][j][1]} <- {grid[i2][j2][1]}\n"
-            txt.config(state="normal")
-            txt.delete("1.0", "end")
-            txt.insert("1.0", code)
-            txt.config(state="disabled")
+            add_text(f"{grid[i][j][1]} <- {grid[i2][j2][1]}\n")
             cv.config(cursor="hand2")
         redraw()
 
@@ -211,10 +268,14 @@ def release(e):
 def move(e):
     i = e.y // G_SZ
     j = e.x // G_SZ
-    if 0 <= i < G_ROW and 0 <= j < G_COL and grid[i][j][0] == VALUE:
-        cv.config(cursor="hand2")
-    else:
-        cv.config(cursor="arrow")
+    if 0 <= i < G_ROW and 0 <= j < G_COL:
+        if grid[i][j][0] == VALUE:
+            cv.config(cursor="hand2")
+            return
+        if grid[i][j][0] == CONTROL and e.x // (G_SZ / 2) % 2 == 0:
+            cv.config(cursor="hand2")
+            return
+    cv.config(cursor="arrow")
 
 
 def drag(e):
@@ -226,11 +287,8 @@ def drag(e):
 
 
 def reset(e):
-    global code, grid
-    code = ""
-    txt.config(state="normal")
-    txt.delete("1.0", "end")
-    txt.config(state="disabled")
+    global grid
+    set_text("")
     grid = init_grid(var, arr)
     redraw()
 
