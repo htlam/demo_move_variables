@@ -19,20 +19,16 @@ LENGTH = 4
 CONTROL = 5
 
 # Options
-opt1 = [
-    "Swap A and B",
+opt = [
+    "Swap X and Y",
     "Swap A[1] and A[3]",
     "Delete A[1]",
     "Insert X at A[1]",
     "Move A[3] before A[0]",
     "Reverse A",
 ]
-opt2 = [
-    "without tmp variable",
-    "with tmp variable",
-]
 opt_var = [
-    {"A": 3, "B": 4},
+    {"X": 3, "Y": 4},
     {},
     {},
     {"X": 1},
@@ -48,30 +44,34 @@ opt_arr = [
     {"A": [1, 2, 3, 5, 8]},
 ]
 
+# Window settings
+root = Tk()
+root.title("How to move variables")
+app = Frame(root)
+app.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
 # States
-task1 = 0
-task2 = 0
+task = 0
 var = opt_var[0]
 arr = opt_arr[0]
 grid = None
 selected = None
-
+task_var = StringVar()
+temp_var = BooleanVar()
 
 # State change handlers
 def change_task(v):
-    global task1, var, arr
-    task1 = opt1.index(v)
-    var = opt_var[task1]
-    arr = opt_arr[task1]
-    if task2 == 1:
+    global task, var, arr
+    task = opt.index(v)
+    var = opt_var[task]
+    arr = opt_arr[task]
+    if temp_var.get():
         var["tmp"] = None
     reset(None)
 
 
-def change_tmp(v):
-    global task2
-    task2 = opt2.index(v)
-    if task2 == 1:
+def change_temp():
+    if temp_var.get():
         var["tmp"] = None
     else:
         del var["tmp"]
@@ -81,12 +81,6 @@ def change_tmp(v):
 ##
 # Widgets
 #
-
-# Window settings
-root = Tk()
-root.title("How to move variables")
-app = Frame(root)
-app.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
 # TOP frame
 top = Frame(app)
@@ -101,10 +95,12 @@ bottom = Frame(app)
 bottom.pack(fill=X)
 btn = ttk.Button(bottom, text="Reset")
 btn.pack(side=RIGHT)
-dropdown1 = ttk.OptionMenu(bottom, StringVar(app), opt1[0], *opt1, command=change_task)
-dropdown1.pack(side=LEFT)
-dropdown2 = ttk.OptionMenu(bottom, StringVar(app), opt2[0], *opt2, command=change_tmp)
-dropdown2.pack(side=LEFT)
+dropdown = ttk.OptionMenu(bottom, task_var, opt[0], *opt, command=change_task)
+dropdown.pack(side=LEFT)
+checkbox = ttk.Checkbutton(
+    bottom, text="tmp variable", variable=temp_var, command=change_temp
+)
+checkbox.pack(side=LEFT)
 
 # Reset grid with variables and arrays
 def init_grid(var, arr):
@@ -134,7 +130,7 @@ def redraw():
     cv.create_text(
         (5, 5),
         anchor=NW,
-        text=f"{opt1[task1]} {opt2[task2]}",
+        text=opt[task] + (" using tmp variable" if temp_var.get() else ""),
         fill="orange",
         font=FONT12,
     )
@@ -291,7 +287,7 @@ def reset(e):
     redraw()
 
 
-# # Binding
+# Binding
 cv.bind("<ButtonPress-1>", press)
 cv.bind("<ButtonRelease-1>", release)
 cv.bind("<Motion>", move)
