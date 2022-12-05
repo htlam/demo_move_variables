@@ -1,10 +1,10 @@
 # Demo Move Variables
 
-This project is an **interactive demonstration** on how to *swap variables* and *manipulate array elements* for students who are new to programming.
+An **interactive demonstration** on how to *swap variables* and *manipulate array elements* for beginners.
 
-A program statement does not really *move* variable. It *copies* and *overwrites* value of variable. Therefore, a dummy variable is often used to hold the temporary value.
+A program statement does not really *move* variable. It *copies* and *overwrites* the value of variable. Therefore, a dummy variable is often used to hold the temporary value.
 
-The following tasks are included to help student learn these maneuvers:
+The following tasks are included to help students learn these maneuvers:
 
 * Swap A and B
 * Swap A[1] and A[3]
