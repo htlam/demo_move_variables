@@ -19,7 +19,7 @@ LENGTH = 4
 CONTROL = 5
 
 # Options
-opt = [
+task_opt = [
     "Swap X and Y",
     "Swap A[1] and A[3]",
     "Delete A[1]",
@@ -27,19 +27,11 @@ opt = [
     "Move A[3] before A[0]",
     "Reverse A",
 ]
-opt_var = [
+var_opt = [
     {"X": 3, "Y": 4},
-    {},
-    {},
-    {"X": 1},
-    {},
-    {},
-]
-opt_arr = [
-    {},
     {"A": [2, 7, 1, 4, 3]},
     {"A": [1, 3, 5, 7, 9]},
-    {"A": [2, 4, 6, 8]},
+    {"X": 1, "A": [2, 4, 6, 8]},
     {"A": [2, 7, 1, 4, 3]},
     {"A": [1, 2, 3, 5, 8]},
 ]
@@ -52,8 +44,6 @@ app.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
 # States
 task = 0
-var = opt_var[0]
-arr = opt_arr[0]
 grid = None
 selected = None
 task_var = StringVar()
@@ -61,20 +51,12 @@ temp_var = BooleanVar()
 
 # State change handlers
 def change_task(v):
-    global task, var, arr
-    task = opt.index(v)
-    var = opt_var[task]
-    arr = opt_arr[task]
-    if temp_var.get():
-        var["tmp"] = None
+    global task
+    task = task_opt.index(v)
     reset(None)
 
 
 def change_temp():
-    if temp_var.get():
-        var["tmp"] = None
-    else:
-        del var["tmp"]
     reset(None)
 
 
@@ -95,7 +77,7 @@ bottom = Frame(app)
 bottom.pack(fill=X)
 btn = ttk.Button(bottom, text="Reset")
 btn.pack(side=RIGHT)
-dropdown = ttk.OptionMenu(bottom, task_var, opt[0], *opt, command=change_task)
+dropdown = ttk.OptionMenu(bottom, task_var, task_opt[0], *task_opt, command=change_task)
 dropdown.pack(side=LEFT)
 checkbox = ttk.Checkbutton(
     bottom, text="tmp variable", variable=temp_var, command=change_temp
@@ -103,8 +85,14 @@ checkbox = ttk.Checkbutton(
 checkbox.pack(side=LEFT)
 
 # Reset grid with variables and arrays
-def init_grid(var, arr):
+def reset_grid():
+    global grid
     grid = [[[BLANK, None, None]] * G_COL for _ in range(G_ROW)]
+    var = {k: v for k, v in var_opt[task].items() if type(v) is not list}
+    arr = {k: v for k, v in var_opt[task].items() if type(v) is list}
+    if temp_var.get():
+        var["tmp"] = None
+
     for i, (k, v) in enumerate(var.items()):
         grid[2][i * 3 + 1] = [NAME, k, k]
         grid[2][i * 3 + 2] = [VALUE, k, v]
@@ -117,7 +105,6 @@ def init_grid(var, arr):
         grid[2][len(var) * 3 + 1] = [NAME, "N", "N"]
         grid[2][len(var) * 3 + 2] = [LENGTH, "N", len(list(arr.values())[0])]
         grid[2][len(var) * 3 + 3] = [CONTROL, "N", "N"]
-    return grid
 
 
 ##
@@ -130,7 +117,7 @@ def redraw():
     cv.create_text(
         (5, 5),
         anchor=NW,
-        text=opt[task] + (" using tmp variable" if temp_var.get() else ""),
+        text=task_opt[task] + (" using tmp variable" if temp_var.get() else ""),
         fill="orange",
         font=FONT12,
     )
@@ -283,7 +270,7 @@ def drag(e):
 def reset(e):
     global grid
     set_text("")
-    grid = init_grid(var, arr)
+    reset_grid()
     redraw()
 
 
@@ -295,7 +282,7 @@ cv.bind("<B1-Motion>", drag)
 btn.bind("<Button-1>", reset)
 
 # Main
-grid = init_grid(var, arr)
+reset_grid()
 redraw()
 
 app.mainloop()
